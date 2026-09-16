@@ -1,0 +1,1 @@
+# kimya finans asistanı
