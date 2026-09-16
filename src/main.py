@@ -1,5 +1,6 @@
 import os
 import threading
+import tkinter as tk
 import customtkinter as ctk
 import requests
 import time
@@ -31,16 +32,28 @@ class AssistantApp(ctk.CTk):
         super().__init__()
 
         # Window Settings
-        self.title("A Kimya - Finans Risk Asistanı")
-        self.geometry("700x550")
+        self.title("X KİMYA - Finans Risk Asistanı")
+        self.geometry("700x500")
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(0, weight=0)  # Key Input area takes fixed space
-        self.grid_rowconfigure(1, weight=1)  # Chat box area takes full space
-        self.grid_rowconfigure(2, weight=0)  # Input area takes fixed space
+        self.grid_rowconfigure(0, weight=0)  # Label area takes fixed space
+        self.grid_rowconfigure(1, weight=0)  # Key Input area takes fixed space
+        self.grid_rowconfigure(2, weight=1)  # Chat box area takes full space
+
+        self.styled_label = ctk.CTkLabel(
+            master=self,
+            text="X KİMYA | Finans Risk Asistanı",
+            font=("Helvetica", 16, "bold"),
+            text_color="white",
+            fg_color="#364a58",  # Blue background color
+            corner_radius=8,  # Rounded corners
+            width=150,
+            height=40,
+        )
+        self.styled_label.grid(row=0, column=0, padx=20, pady=(10, 20), sticky="ew")
 
         # UI Element API Key Input Layout Frame:
         self.api_input_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.api_input_frame.grid(row=0, column=0, padx=20, pady=(10, 20), sticky="ew")
+        self.api_input_frame.grid(row=1, column=0, padx=20, pady=(10, 20), sticky="ew")
         self.api_input_frame.grid_columnconfigure(0, weight=1)
 
         # UI Element API Key Input Field:
@@ -49,49 +62,37 @@ class AssistantApp(ctk.CTk):
             placeholder_text="Gemini API Key giriniz...",
             font=("Arial", 12),
         )
-        self.api_input.grid(row=0, column=0, padx=(0, 10), sticky="ew")
+        self.api_input.grid(row=0, column=0, padx=(0, 0), sticky="ew")
         self.api_input.bind("<Return>", lambda event: self.start_chat_thread())
 
         # UI Element 1: Chat History Display (Scrollable)
         self.chat_display = ctk.CTkTextbox(
             self, state="disabled", wrap="word", font=("Arial", 12)
         )
-        self.chat_display.grid(row=1, column=0, padx=20, pady=(20, 10), sticky="nsew")
+        self.chat_display.grid(row=2, column=0, padx=20, pady=(20, 10), sticky="nsew")
         self.chat_display.tag_config("green_line", foreground="#15f800")
+        self.chat_display.tag_config("yellow_line", foreground="#ffd900")
+        self.chat_display.tag_config("red_line", foreground="#ff0000")
         self.chat_display.tag_config("white_line", foreground="#ffffff")
-
-        # UI Element 2: Bottom Input Bar Layout Frame
-        self.input_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.input_frame.grid(row=2, column=0, padx=20, pady=(10, 20), sticky="ew")
-        self.input_frame.grid_columnconfigure(0, weight=1)
-
-        # UI Element 3: Text Input Field
-        self.user_input = ctk.CTkEntry(
-            self.input_frame,
-            placeholder_text="Ask Gemini something...",
-            font=("Arial", 12),
-        )
-        self.user_input.grid(row=0, column=0, padx=(0, 10), sticky="ew")
-        self.user_input.bind("<Return>", lambda event: self.start_chat_thread())
 
         # UI Element 4: Send Button
         self.send_button = ctk.CTkButton(
             self,
-            text="Gönder",
+            text="Rapor Oluştur",
             command=self.start_chat_thread,
             font=("Arial", 12, "bold"),
         )
         self.send_button.grid(
             row=1, column=0, padx=20, pady=(10, 20), sticky="e"
         )  # Placed on grid right edge
-        self.input_frame.grid_columnconfigure(1, weight=0)
-        self.send_button.master = self.input_frame
+        # self.input_frame.grid_columnconfigure(1, weight=0)
+        # self.send_button.master = self.input_frame
         self.send_button.grid(row=0, column=1)
 
         # Core System Message Appending
         self.append_message(
             "Sistem",
-            "Risk asistanı başlatıldı!\n" + "─" * 30 + "\n",
+            "Finans Risk Asistanı başlatıldı!\n" + "─" * 30 + "\n",
         )
 
     def append_message(self, sender: str, text: str, color: str = "white_line"):
@@ -119,14 +120,6 @@ class AssistantApp(ctk.CTk):
         self.connect_to_gemini()
         threading.Thread(target=self.get_news, args=(), daemon=True).start()
 
-        """Spawns a background thread so the UI window doesn't freeze during the API call."""
-        prompt = self.user_input.get().strip()
-        if not prompt:
-            return
-
-        # Visual UI Updates
-        self.append_message("You", f"{prompt}\n\n")
-        self.user_input.delete(0, "end")
         self.send_button.configure(
             state="disabled"
         )  # Disable button to prevent spamming
@@ -150,7 +143,9 @@ class AssistantApp(ctk.CTk):
             return
 
         try:
-            self.append_message("Sistem", f"Gemini AI verileri işliyor...\n\n")
+            self.append_message(
+                "Sistem", f"Gemini AI verileri işliyor. Lütfen bekleyin...\n\n"
+            )
             # Use 'after(0, ...)' to safely push text updates back onto the Main Tkinter UI Thread
             self.after(0, lambda: self.chat_display.configure(state="normal"))
             # self.after(0, lambda: self.chat_display.insert("end", "[Gemini]: "))
@@ -160,6 +155,11 @@ class AssistantApp(ctk.CTk):
                 model="gemini-3.6-flash",
                 contents=prompt,
             )
+
+            self.append_message(
+                "Sistem", f"Gemini AI verileri işledi. Rapor hazırlanıyor...\n\n"
+            )
+            self.create_report()
 
             # for chunk in response_stream:
             #     if chunk.text:
@@ -176,19 +176,26 @@ class AssistantApp(ctk.CTk):
             # self.after(0, lambda: self.chat_display.configure(state="disabled"))
 
         except Exception as e:
-            self.after(0, lambda: self.append_message("Sistem", f"API Error: {e}\n\n"))
+            self.after(
+                0,
+                lambda: self.append_message(
+                    "Sistem", f"API Error: {e}\n\n", "red_line"
+                ),
+            )
+            self.after(
+                0,
+                lambda: self.append_message(
+                    "Sistem", f"Doğru API Key girdiğinizden emin olun.\n\n", "red_line"
+                ),
+            )
 
         finally:
             # Re-enable the send button when done
             self.after(0, lambda: self.send_button.configure(state="normal"))
-            self.append_message(
-                "Sistem", f"Gemini AI verileri işledi. Rapor hazırlanıyor...\n\n"
-            )
-            self.create_report()
 
     def get_news(self):
         self.append_message(
-            "Sistem", f"Lütfen bekleyin... Güncel haberler araştırılıyor...\n\n"
+            "Sistem", f"Güncel haberler araştırılıyor. Lütfen bekleyin...\n\n"
         )
         self.news_list = f""
         for key in keywords:
@@ -218,14 +225,20 @@ class AssistantApp(ctk.CTk):
             except requests.exceptions.RequestException as e:
                 # Handle connection errors, timeouts, etc.
                 print(f"An error occurred: {e}\n")
+                self.append_message(
+                    "Sistem", f"Güncel haberler araştırılırken hata.\n\n", "red_line"
+                )
+                return
 
             # 3. Pause for 1 second before the next request (Politeness/Rate limiting)
             time.sleep(1)
-        self.append_message("Sistem", f"Güncel haberler kaydedildi.\n\n", "green_line")
+        self.append_message("Sistem", f"Güncel haberler kaydedildi.\n\n", "yellow_line")
         threading.Thread(target=self.get_prices, args=(), daemon=True).start()
 
     def get_prices(self):
-        self.append_message("Sistem", f"Güncel fiyatlar araştırılıyor...\n\n")
+        self.append_message(
+            "Sistem", f"Güncel fiyatlar araştırılıyor. Lütfen bekleyin...\n\n"
+        )
         self.prices = ""
         # 1. OTOMASYON: Takip etmek istediğimiz finansal varlıkların Yahoo Finance sembolleri
         # BZ=F -> Brent Petrol, NG=F -> Doğalgaz, USDTRY=X -> Dolar Kuru
@@ -254,8 +267,12 @@ class AssistantApp(ctk.CTk):
                 self.prices += f"- {isim}, Güncel Fiyat: {round(guncel_fiyat, 2)}, Önceki Kapanış: {round(onceki_fiyat, 2)}, Günlük Değişim (%): {round(yuzde_degisim, 2)}\n"
             else:
                 print(f"Hata: {isim} için yeterli veri alınamadı.")
+                self.append_message(
+                    "Sistem", f"Güncel fiyatlar araştırılırken hata.\n\n", "red_line"
+                )
+                return
 
-        self.append_message("Sistem", f"Güncel fiyatlar kaydedildi.\n\n", "green_line")
+        self.append_message("Sistem", f"Güncel fiyatlar kaydedildi.\n\n", "yellow_line")
 
         self.PROMPT = f"""
         Sen kimya boya üretim sektöründe 20 yıllık deneyime sahip kıdemli bir Tedarik Zinciri ve Satın Alma Stratejistisin.
@@ -269,7 +286,7 @@ class AssistantApp(ctk.CTk):
         2. Sadece genel bir özet geçme; haberlerin satın alma maliyetlerine, tedarik sürelerine, lojistiğe veya hammadde bulunabilirliğine (polimerler, petrokimya, özel kimyasallar vb.) olası etkilerini yorumla.
         3. Varsa kritik riskleri (grevler, fabrika kapanmaları, kota/regülasyon değişiklikleri, navlun krizleri) "KRİTİK UYARI" başlığı altında en başa koy.
         4. Okumayı kolaylaştırmak için markdown formatı (kalın yazılar, listeler, kısa paragraflar) kullan.
-        5. Güncel verilere ve günün şartlarına göre cevap ver.
+        5. Haberler eski tarihli olabilir, güncel verilere ve günün şartlarına göre cevap ver.
 
         Analiz Edilecek Haber ve Fiyat Verileri:
         {self.news_list}
