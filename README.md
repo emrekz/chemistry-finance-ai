@@ -1,1 +1,1 @@
-# kimya finans asistanı
+# kimyasal boya finans asistanı
